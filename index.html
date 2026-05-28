@@ -2,7 +2,6 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>참이슬 KOSPI/S&P 지수 트래커</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -10,7 +9,9 @@
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
     body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
-    .chart-box { height: 280px; position: relative; }
+    .loader { border-top-color: #6366f1; animation: spinner 1.5s linear infinite; }
+    @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .chart-box { height: 300px; position: relative; }
   </style>
 </head>
 <body class="p-4 md:p-8">
@@ -22,34 +23,22 @@
           <i class="fas fa-chart-line text-indigo-600"></i>
           참이슬 KOSPI/S&P 지수
         </h1>
-        <p class="text-slate-500 font-medium">내 컴퓨터에 안전하게 저장되는 단독형 주식 지수 웹앱</p>
+        <p class="text-slate-500 font-medium">구글 스프레드시트 연동형 실시간 트래커</p>
       </div>
 
       <!-- Auth Panel -->
-      <div class="flex flex-wrap gap-2 w-full md:w-auto">
-        <!-- Backup & Restore Buttons (Every user can access) -->
-        <button onclick="exportData()" class="bg-white border text-slate-700 px-3 py-2 rounded-lg hover:bg-slate-50 text-sm font-semibold transition flex items-center gap-1 shadow-sm">
-          <i class="fas fa-download"></i> 백업 백업(다운로드)
+      <div id="auth-section" class="flex gap-2 w-full md:w-auto">
+        <input type="password" id="admin-pass" placeholder="학생 비밀번호" class="flex-grow md:flex-none px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-sm shadow-sm">
+        <button onclick="checkAuth()" class="bg-slate-800 text-white px-4 py-2 rounded-lg hover:bg-slate-700 text-sm font-semibold transition whitespace-nowrap shadow-md">
+          관리자 인증
         </button>
-        <label class="bg-white border text-slate-700 px-3 py-2 rounded-lg hover:bg-slate-50 text-sm font-semibold transition flex items-center gap-1 shadow-sm cursor-pointer">
-          <i class="fas fa-upload"></i> 복구(가져오기)
-          <input type="file" id="import-file" class="hidden" onchange="importData(event)">
-        </label>
-
-        <!-- Admin Input -->
-        <div id="auth-section" class="flex gap-2 flex-grow md:flex-none">
-          <input type="password" id="admin-pass" placeholder="학생 비밀번호" class="flex-grow md:flex-none px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-sm shadow-sm">
-          <button onclick="checkAuth()" class="bg-slate-800 text-white px-4 py-2 rounded-lg hover:bg-slate-700 text-sm font-semibold transition whitespace-nowrap shadow-md">
-            관리자 인증
-          </button>
-        </div>
-        
-        <!-- Admin Logged In -->
-        <div id="admin-badge" class="hidden flex items-center gap-2 bg-indigo-100 text-indigo-700 px-4 py-2 rounded-lg border border-indigo-200 shadow-sm">
-          <i class="fas fa-user-shield"></i>
-          <span class="font-bold text-sm">학생 권한 모드</span>
-          <button onclick="logout()" class="text-xs underline ml-2 opacity-70 hover:opacity-100">로그아웃</button>
-        </div>
+      </div>
+      
+      <!-- Admin Logged In -->
+      <div id="admin-badge" class="hidden flex items-center gap-2 bg-indigo-100 text-indigo-700 px-4 py-2 rounded-lg border border-indigo-200 shadow-sm">
+        <i class="fas fa-user-shield"></i>
+        <span class="font-bold text-sm">학생 권한 모드</span>
+        <button onclick="logout()" class="text-xs underline ml-2 opacity-70 hover:opacity-100">로그아웃</button>
       </div>
     </header>
 
@@ -63,6 +52,9 @@
               <span class="w-2 h-6 bg-blue-500 rounded-full"></span>
               KOSPI 지수 그래프
             </h2>
+            <button onclick="loadData()" class="text-slate-300 hover:text-indigo-600 transition">
+              <i class="fas fa-sync-alt"></i> 새로고침
+            </button>
           </div>
           <div class="chart-box">
             <canvas id="kospiChart"></canvas>
@@ -76,7 +68,7 @@
               <span class="w-2 h-6 bg-red-500 rounded-full"></span>
               S&P 500 지수 그래프
             </h2>
-            <div class="text-xs text-slate-400 font-medium">로컬 브라우저 저장소 연동</div>
+            <div class="text-xs text-slate-400 font-medium">클라우드 데이터베이스 연동 중</div>
           </div>
           <div class="chart-box">
             <canvas id="snpChart"></canvas>
@@ -87,7 +79,7 @@
       <!-- Control & History Section -->
       <div class="space-y-6">
         <!-- Input Panel (Admin Only) -->
-        <div id="input-panel" class="hidden bg-white p-6 rounded-2xl shadow-lg border-t-4 border-indigo-600 animate-in fade-in duration-300">
+        <div id="input-panel" class="hidden bg-white p-6 rounded-2xl shadow-lg border-t-4 border-indigo-600">
           <h3 class="text-lg font-bold mb-4 flex items-center gap-2">
             <i class="fas fa-pen-fancy text-indigo-500"></i>
             지수 데이터 입력
@@ -119,7 +111,7 @@
             <i class="fas fa-list-ol"></i> 입력 기록
           </div>
           <div id="history-list" class="max-h-[250px] overflow-y-auto divide-y divide-slate-100">
-            <div class="p-8 text-center text-slate-400 text-sm">기록이 없습니다.</div>
+            <div class="p-8 text-center text-slate-400 text-sm">데이터를 불러오는 중...</div>
           </div>
           <div class="p-2.5 bg-slate-50 text-[10px] text-center text-slate-400 font-medium">
             지수를 클릭하면 하단 계산기에 자동 입력됩니다.
@@ -171,46 +163,41 @@
     </div>
   </div>
 
+  <!-- Loading Overlay -->
+  <div id="loading-overlay" class="fixed inset-0 bg-slate-900/10 backdrop-blur-[2px] flex items-center justify-center hidden z-50">
+    <div class="bg-white p-6 rounded-2xl shadow-2xl flex flex-col items-center">
+      <div class="loader ease-linear rounded-full border-4 border-t-4 border-slate-100 h-10 w-10 mb-4"></div>
+      <span class="text-sm font-bold text-slate-600">데이터 동기화 중...</span>
+    </div>
+  </div>
+
+  <!-- Custom Elegant Confirm Modal (Replaces native browser confirm) -->
+  <div id="confirm-modal" class="fixed inset-0 bg-slate-950/45 backdrop-blur-sm hidden z-[110] flex items-center justify-center p-4">
+    <div class="bg-white p-6 rounded-2xl max-w-sm w-full shadow-2xl text-center space-y-4 border border-slate-100">
+      <h3 id="confirm-title" class="text-lg font-bold text-slate-800">알림</h3>
+      <p id="confirm-desc" class="text-sm text-slate-500 leading-relaxed"></p>
+      <div class="flex gap-2 justify-center">
+        <button id="confirm-yes-btn" class="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-xl font-semibold text-sm transition">확인</button>
+        <button onclick="closeConfirmModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2 rounded-xl font-semibold text-sm transition">취소</button>
+      </div>
+    </div>
+  </div>
+
   <script>
+    // 🔗 전달해주신 구글 앱 스크립트 웹앱 주소가 성공적으로 세팅되었습니다!
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbwtLVYVy7vSikP-HUmDbF65EO2fl1T9ssOlLB6rXTtHkWopjiV9DY0KI8OFToyVZsBVZQ/exec"; 
+
     let kospiChartInstance = null;
     let snpChartInstance = null;
     let isAdmin = false;
     let savedPassword = "";
-    let localData = [];
-
-    // 기본 가상 데이터 (최초 실행 시 심심하지 않게 예제를 로드해 둡니다)
-    const DEFAULT_MOCK_DATA = [
-      { id: 1714521600000, date: '2026-05-01', kospi: 2650.12, snp: 5010.25 },
-      { id: 1714608000000, date: '2026-05-02', kospi: 2680.45, snp: 5050.10 },
-      { id: 1714694400000, date: '2026-05-03', kospi: 2670.30, snp: 5120.44 },
-      { id: 1714780800000, date: '2026-05-04', kospi: 2710.88, snp: 5180.20 },
-      { id: 1714867200000, date: '2026-05-05', kospi: 2730.15, snp: 5210.60 }
-    ];
+    let confirmCallback = null;
 
     window.onload = () => {
       document.getElementById('input-date').value = new Date().toISOString().split('T')[0];
-      initStorage();
       loadData();
     };
 
-    // 로컬스토리지 초기 설정
-    function initStorage() {
-      const stored = localStorage.getItem('sool_stock_data');
-      if (stored) {
-        localData = JSON.parse(stored);
-      } else {
-        // 최초 실행 시 기본 데이터 탑재
-        localData = DEFAULT_MOCK_DATA;
-        localStorage.setItem('sool_stock_data', JSON.stringify(localData));
-      }
-    }
-
-    // 데이터 저장소 업데이트
-    function saveToStorage() {
-      localStorage.setItem('sool_stock_data', JSON.stringify(localData));
-    }
-
-    // 로그인 체크
     function checkAuth() {
       const pass = document.getElementById('admin-pass').value;
       if (pass === "admin602") {
@@ -237,13 +224,24 @@
       showStatus("로그아웃 되었습니다.");
     }
 
-    // 데이터를 읽어와 그래프와 목록 업데이트
+    // 서버(구글 시트)에서 실시간 데이터 로드
     function loadData() {
-      // 날짜순 정렬
-      localData.sort((a, b) => new Date(a.date) - new Date(b.date));
-      
-      renderCharts(localData);
-      renderHistory(localData);
+      showLoading(true);
+
+      fetch(`${GAS_URL}?action=get`)
+        .then(res => {
+          if (!res.ok) throw new Error("서버 응답 오류");
+          return res.json();
+        })
+        .then(data => {
+          renderCharts(data);
+          renderHistory(data);
+          showLoading(false);
+        })
+        .catch(err => {
+          showStatus("클라우드 동기화 실패: " + err.message, true);
+          showLoading(false);
+        });
     }
 
     function renderCharts(data) {
@@ -288,8 +286,7 @@
             tooltip: {
               padding: 10,
               backgroundColor: 'rgba(15, 23, 42, 0.95)',
-              titleFont: { size: 12, weight: 'bold' },
-              bodyFont: { size: 12 }
+              titleFont: { size: 12, weight: 'bold' }
             }
           },
           scales: {
@@ -308,7 +305,7 @@
       }
 
       container.innerHTML = [...data].reverse().map(item => `
-        <div class="p-4 flex justify-between items-center group hover:bg-slate-50 transition">
+        <div class="p-4 flex justify-between items-center group hover:bg-slate-50 transition animate-in fade-in duration-300">
           <div class="flex-grow">
             <div class="text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider">${item.date}</div>
             <div class="flex gap-4">
@@ -321,7 +318,7 @@
             </div>
           </div>
           ${isAdmin ? `
-            <button onclick="deleteItem(${item.id})" class="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition opacity-0 group-hover:opacity-100">
+            <button onclick="triggerDelete(${item.rowId})" class="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition opacity-0 group-hover:opacity-100">
               <i class="fas fa-trash-alt"></i>
             </button>
           ` : ''}
@@ -329,44 +326,72 @@
       `).join('');
     }
 
-    // 데이터 제출
+    // 서버로 데이터 추가 전송
     function submitData() {
       const date = document.getElementById('input-date').value;
       const kospi = parseFloat(document.getElementById('input-kospi').value);
       const snp = parseFloat(document.getElementById('input-snp').value);
+      const btn = document.getElementById('submit-btn');
 
       if (!date || isNaN(kospi) || isNaN(snp)) {
         showStatus("날짜와 두 지수를 모두 입력해주세요.", true);
         return;
       }
 
-      // 이미 해당 날짜의 데이터가 존재하는지 확인
-      const existingIdx = localData.findIndex(item => item.date === date);
-      if (existingIdx !== -1) {
-        if (!confirm(`${date}에 등록된 데이터가 이미 있습니다. 덮어쓰시겠습니까?`)) {
-          return;
-        }
-        localData[existingIdx] = { id: Date.now(), date, kospi, snp };
-      } else {
-        localData.push({ id: Date.now(), date, kospi, snp });
-      }
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i>클라우드 저장 중...';
 
-      saveToStorage();
-      loadData();
+      const url = `${GAS_URL}?action=add&password=${encodeURIComponent(savedPassword)}&date=${encodeURIComponent(date)}&kospi=${kospi}&snp=${snp}`;
 
-      // 입력란 비우기
-      document.getElementById('input-kospi').value = "";
-      document.getElementById('input-snp').value = "";
-      showStatus("데이터가 안전하게 저장되었습니다.");
+      fetch(url)
+        .then(res => res.json())
+        .then(resData => {
+          if (resData.success) {
+            showStatus("성공적으로 구글 시트에 저장되었습니다!");
+            document.getElementById('input-kospi').value = "";
+            document.getElementById('input-snp').value = "";
+            loadData(); // 지수 즉시 다시 로딩
+          } else {
+            showStatus("저장 실패: " + resData.error, true);
+          }
+          btn.disabled = false;
+          btn.innerText = "오늘의 데이터 저장";
+        })
+        .catch(err => {
+          showStatus("인터넷 오류: " + err.message, true);
+          btn.disabled = false;
+          btn.innerText = "오늘의 데이터 저장";
+        });
     }
 
-    // 데이터 삭제
-    function deleteItem(id) {
-      if (!confirm("해당 지수 데이터를 삭제하시겠습니까?")) return;
-      localData = localData.filter(item => item.id !== id);
-      saveToStorage();
-      loadData();
-      showStatus("데이터가 삭제되었습니다.");
+    // 커스텀 팝업 트리거
+    function triggerDelete(rowId) {
+      showConfirmModal("데이터 삭제 경고", "해당 데이터를 구글 스프레드시트에서 영구적으로 삭제하시겠습니까?", () => {
+        executeDelete(rowId);
+      });
+    }
+
+    // 데이터 삭제 요청 실행
+    function executeDelete(rowId) {
+      showLoading(true);
+
+      const url = `${GAS_URL}?action=delete&password=${encodeURIComponent(savedPassword)}&rowId=${rowId}`;
+
+      fetch(url)
+        .then(res => res.json())
+        .then(resData => {
+          if (resData.success) {
+            showStatus("데이터가 삭제되었습니다.");
+            loadData();
+          } else {
+            showStatus("삭제 실패: " + resData.error, true);
+            showLoading(false);
+          }
+        })
+        .catch(err => {
+          showStatus("네트워크 에러: " + err.message, true);
+          showLoading(false);
+        });
     }
 
     // 계산기 자동입력
@@ -374,7 +399,7 @@
       const buyField = document.getElementById('calc-buy');
       const sellField = document.getElementById('calc-sell');
       if (!buyField.value) { buyField.value = value; } 
-      else { buyField.value = value; } // 새로 누르면 기본적으로 매수에 먼저 들어가도록 구성
+      else { buyField.value = value; }
       calculateProfit();
     }
 
@@ -392,7 +417,6 @@
       if (buy !== 0 && sell !== 0) {
         resultDiv.classList.remove('hidden');
         
-        // 수익률 계산
         const profitPercent = ((sell - buy) / buy) * 100;
         percentEl.innerText = (profitPercent >= 0 ? '+' : '') + profitPercent.toFixed(2) + '%';
         percentEl.className = `text-xl font-black ${profitPercent >= 0 ? 'text-emerald-400' : 'text-red-400'}`;
@@ -416,44 +440,12 @@
       }
     }
 
-    // 데이터 백업 (JSON 다운로드)
-    function exportData() {
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(localData, null, 2));
-      const downloadAnchorNode = document.createElement('a');
-      downloadAnchorNode.setAttribute("href", dataStr);
-      downloadAnchorNode.setAttribute("download", `sool_stock_data_${new Date().toISOString().split('T')[0]}.json`);
-      document.body.appendChild(downloadAnchorNode);
-      downloadAnchorNode.click();
-      downloadAnchorNode.remove();
-      showStatus("데이터가 JSON 파일로 백업되었습니다.");
+    function showLoading(show) {
+      const overlay = document.getElementById('loading-overlay');
+      if (overlay) show ? overlay.classList.remove('hidden') : overlay.classList.add('hidden');
     }
 
-    // 데이터 복구 (JSON 가져오기)
-    function importData(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        try {
-          const imported = JSON.parse(e.target.result);
-          if (Array.isArray(imported)) {
-            if (confirm("정말 이 파일로 로컬 데이터를 대체하시겠습니까? (현재 기기의 데이터가 덮어씌워집니다.)")) {
-              localData = imported;
-              saveToStorage();
-              loadData();
-              showStatus("데이터 복구가 성공적으로 완료되었습니다!");
-            }
-          } else {
-            showStatus("올바르지 않은 파일 형식입니다.", true);
-          }
-        } catch (err) {
-          showStatus("파일을 읽는 도중 오류가 발생했습니다.", true);
-        }
-      };
-      reader.readAsText(file);
-    }
-
+    // 커스텀 토스트 알림창
     function showStatus(msg, isError = false) {
       const toast = document.createElement('div');
       toast.className = `fixed bottom-6 left-1/2 -translate-x-1/2 px-8 py-4 rounded-2xl shadow-2xl text-white font-bold z-[100] transition-all transform animate-bounce ${isError ? 'bg-red-600' : 'bg-indigo-600'}`;
@@ -462,8 +454,26 @@
       setTimeout(() => {
         toast.style.opacity = '0';
         setTimeout(() => toast.remove(), 500);
-      }, 3000);
+      }, 4000);
     }
+
+    // 커스텀 모달 제어 함수들 (alert, confirm 원천 금지 규칙 반영)
+    function showConfirmModal(title, description, onConfirm) {
+      document.getElementById('confirm-title').innerText = title;
+      document.getElementById('confirm-desc').innerText = description;
+      document.getElementById('confirm-modal').classList.remove('hidden');
+      confirmCallback = onConfirm;
+    }
+
+    function closeConfirmModal() {
+      document.getElementById('confirm-modal').classList.add('hidden');
+      confirmCallback = null;
+    }
+
+    document.getElementById('confirm-yes-btn').onclick = () => {
+      if (confirmCallback) confirmCallback();
+      closeConfirmModal();
+    };
   </script>
 </body>
 </html>
